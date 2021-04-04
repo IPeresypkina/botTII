@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 import telebot
 from telebot import types
+
+def select_just_keyboard(data):
+    keyboard = types.ReplyKeyboardMarkup()
+    callback_button_help = types.KeyboardButton(text=data)
+    keyboard.add(callback_button_help)
+    return keyboard
+
 def select_keyboard(k_type):
     if k_type == "cat-dog":
         keyboard = types.InlineKeyboardMarkup()

@@ -10,6 +10,10 @@ import utils
 chat_id = ''
 section_number = 0
 
+# история переходов
+history_fsm = ""
+breed = ""
+
 # Массив финальных состояний
 finals = ['first39', 'first41', 'first42', 'first43', 'first44', 'first48', 'first49', 'first50', 'first52', 'first53',
           'first54', 'first55', 'first56', 'second11', 'second13', 'second17', 'second18', 'second21', 'second22',
@@ -147,6 +151,7 @@ def create_fsm():
 
 # Метод для формирования конечного ответа
 def pet_description(image, number):
+    global breed
     sti = open(image, 'rb')
     breed = response_storage.select_message(section_number, number, 'answer')
     bot.send_photo(chat_id=chat_id,
@@ -154,9 +159,38 @@ def pet_description(image, number):
                    caption="Перед вами: <a href='https://ru.wikipedia.org/wiki/" + breed.replace(' ', '_') + "'>" + breed + "</a>",
                    parse_mode='HTML'
                    )
-    # if fsm.current in finals:  # если текущее состояние является финальным, то
-    #     fsm.go_to_start()  # переходим снова в начало к выбору ветки
-    #     return
+    if fsm.current in finals:  # если текущее состояние является финальным, то
+        keyboard = utils.select_just_keyboard("Объяснение решения")
+        bot.send_message(chat_id=chat_id,
+                         text=response_storage.solve_message,
+                         reply_markup=keyboard
+                         )
+
+# Метод для формирования блока объяснения вопросов и решений
+def formation_of_a_help(number, image = None):
+    global sti
+    global block
+    global key
+    block = number
+    sti = image
+    @bot.message_handler(content_types=['text'])
+    def send_text_help(message):
+        if message.text == 'Объяснение вопроса':
+            bot.send_message(chat_id=chat_id,
+                             text=response_storage.select_message(section_number, block, 'explanation'),
+                             parse_mode='HTML')
+            bot.send_photo(chat_id=chat_id,
+                    caption="",
+                    photo=open(sti, 'rb')
+                    )
+        elif message.text == 'Объяснение решения':
+            global history_fsm
+            global breed
+            history_fsm += "следовательно, взглянув на фотографию выше, можно сделать вывод о том, что это " + breed + "."
+            bot.send_message(chat_id=chat_id,
+                             text=history_fsm,
+                             parse_mode='HTML')
+            history_fsm = ""
 
 # Метод для формирования вопроса
 def formation_of_a_request(key, number):
@@ -166,6 +200,10 @@ def formation_of_a_request(key, number):
                      reply_markup=keyboard)
 
 
+def formation_of_a_history(number):
+    global history_fsm
+    history_fsm += response_storage.select_message(section_number, number, 'history')
+
 #Метод для перехода на следующее состояние после набора команды "/start"
 def change_state(state):
     if state == 'waiting_start':
@@ -173,10 +211,12 @@ def change_state(state):
 
 #Описываем работу обработчика события "onwaiting_start"
 def onwaiting_start(e):
+    keyboard = utils.select_just_keyboard("Объяснение вопроса")
     @bot.message_handler(commands=["start"]) #атрибут отвечающие за реагирование на набор команды "/start"
     def start(message):
         bot.send_message(chat_id=message.chat.id,
-                         text=response_storage.welcome_message) #берем текст сообщения из банка всех текстов(response_storage.py)
+                         text=response_storage.welcome_message,
+                         reply_markup=keyboard) #берем текст сообщения из банка всех текстов(response_storage.py)
         global chat_id
         chat_id = message.chat.id
         fsm.current = 'waiting_start' #указываем, что текущее состояние - "waiting_start"
@@ -190,121 +230,203 @@ def onshow_sections(e):
                      reply_markup=keyboard)
 
 def onfirst1(e):
+    formation_of_a_help(1)
     formation_of_a_request("haired", 1)
 def onfirst33(e):
+    formation_of_a_help(3)
     formation_of_a_request("dog-height", 3)
+    formation_of_a_history(1)
 def onfirst34(e):
+    formation_of_a_help(3)
     formation_of_a_request("dog-height", 3)
+    formation_of_a_history(2)
 def onfirst35(e):
+    formation_of_a_help(2)
     formation_of_a_request("tail", 2)
+    formation_of_a_history(3)
 def onfirst36(e):
+    formation_of_a_help(4, "dog/explanation/weight.png")
     formation_of_a_request("dog-weight", 4)
+    formation_of_a_history(4)
 def onfirst37(e):
+    formation_of_a_help(5)
     formation_of_a_request("no-yes", 5)
+    formation_of_a_history(3)
 def onfirst38(e):
+    formation_of_a_help(6)
     formation_of_a_request("dog-height-70", 6)
+    formation_of_a_history(4)
 def onfirst39(e):
+    formation_of_a_history(19)
     pet_description('dog/Английский_бульдог.jpeg', 1)
     # bot.send_message(chat_id=chat_id,
     #                  text=breed
     #                  )
 def onfirst40(e):
+    formation_of_a_history(20)
+    formation_of_a_help(7)
     formation_of_a_request("dog-ears", 7)
+
 def onfirst41(e):
+    formation_of_a_history(5)
     pet_description('dog/angliyskiy-fokskhaund.jpg', 5)
 def onfirst42(e):
+    formation_of_a_history(6)
     pet_description('dog/Датский_дог.jpg', 6)
 def onfirst43(e):
+    formation_of_a_history(12)
     pet_description('dog/Ирландский_красный_сеттер.jpg', 7)
 def onfirst44(e):
+    formation_of_a_history(11)
     pet_description('dog/English_Cocker_Spaniel.jpg', 8)
 def onfirst45(e):
+    formation_of_a_history(17)
+    formation_of_a_help(7)
     formation_of_a_request("dog-ears", 7)
 def onfirst46(e):
+    formation_of_a_history(18)
+    formation_of_a_help(9)
     formation_of_a_request("yes-no", 9)
 def onfirst47(e):
+    formation_of_a_history(7)
+    formation_of_a_help(8)
     formation_of_a_request("dog-body", 8)
 def onfirst48(e):
+    formation_of_a_history(8)
     pet_description('dog/гончая.jpg', 4)
 def onfirst49(e):
+    formation_of_a_history(7)
     pet_description('dog/Колли.jpg', 9)
 def onfirst50(e):
+    formation_of_a_history(8)
     pet_description('dog/Большой_вандейский_грифон.jpg', 10)
 def onfirst51(e):
+    formation_of_a_history(14)
+    formation_of_a_help(10)
     formation_of_a_request("yes-no", 10)
 def onfirst52(e):
+    formation_of_a_history(13)
     pet_description('dog/Сенбернар.jpg', 13)
 def onfirst53(e):
+    formation_of_a_history(9)
     pet_description('dog/Мопс.jpg', 2)
 def onfirst54(e):
+    formation_of_a_history(10)
     pet_description('dog/Chihuahua.jpg', 3)
 def onfirst55(e):
+    formation_of_a_history(16)
     pet_description('dog/Ньюфаундленд.jpg', 11)
 def onfirst56(e):
+    formation_of_a_history(15)
     pet_description('dog/Ирландский_волкодав.jpg', 12)
 
 
 def onsecond2(e):
+    formation_of_a_help(1)
     formation_of_a_request("haired", 1)
 def onsecond3(e):
+    formation_of_a_help(2)
     formation_of_a_request("cat-weight", 2)
+    formation_of_a_history(1)
 def onsecond4(e):
+    formation_of_a_help(2)
     formation_of_a_request("cat-weight", 2)
+    formation_of_a_history(2)
 def onsecond5(e):
+    formation_of_a_help(3)
     formation_of_a_request("tail", 3)
+    formation_of_a_history(3)
 def onsecond6(e):
+    formation_of_a_help(4, "cat/explanation/tail.png")
     formation_of_a_request("yes-no", 4)
+    formation_of_a_history(4)
 def onsecond7(e):
+    formation_of_a_help(4, "cat/explanation/tail.png")
     formation_of_a_request("yes-no", 4)
+    formation_of_a_history(3)
 def onsecond8(e):
+    formation_of_a_help(3)
     formation_of_a_request("tail", 3)
+    formation_of_a_history(4)
 def onsecond9(e):
+    formation_of_a_help(5)
     formation_of_a_request("yes-no", 5)
+    formation_of_a_history(5)
 def onsecond10(e):
+    formation_of_a_help(6)
     formation_of_a_request("yes-no", 6)
+    formation_of_a_history(6)
 def onsecond11(e):
+    formation_of_a_history(10)
     pet_description('cat/Саванна.jpg', 7)
 def onsecond12(e):
+    formation_of_a_help(7, "cat/explanation/рыжий_окрас.jpg")
     formation_of_a_request("yes-no", 7)
+    formation_of_a_history(9)
 def onsecond13(e):
+    formation_of_a_history(10)
     pet_description('cat/Persialainen.jpg', 10)
 def onsecond14(e):
+    formation_of_a_help(6)
     formation_of_a_request("yes-no", 6)
+    formation_of_a_history(9)
 def onsecond15(e):
+    formation_of_a_help(8, "cat/explanation/пятнистый_окрас.jpg")
     formation_of_a_request("yes-no", 8)
+    formation_of_a_history(5)
 def onsecond16(e):
+    formation_of_a_help(4, "cat/explanation/tail.png")
     formation_of_a_request("yes-no", 4)
+    formation_of_a_history(6)
 def onsecond17(e):
+    formation_of_a_history(16)
     pet_description('cat/JapaneseBobtail.jpg', 14)
 def onsecond18(e):
+    formation_of_a_history(15)
     pet_description('cat/Пиксибоб.jpg', 2)
 def onsecond19(e):
+    formation_of_a_help(7, "cat/explanation/рыжий_окрас.jpg")
     formation_of_a_request("yes-no", 7)
+    formation_of_a_history(8)
 def onsecond20(e):
+    formation_of_a_help(4, "cat/explanation/tail.png")
     formation_of_a_request("yes-no", 4)
+    formation_of_a_history(7)
 def onsecond21(e):
+    formation_of_a_history(12)
     pet_description('cat/Kartezianskaya-koshka.jpg', 8)
 def onsecond22(e):
+    formation_of_a_history(11)
     pet_description('cat/Chausie.jpg', 9)
 def onsecond23(e):
+    formation_of_a_history(8)
     pet_description('cat/british_longhair.jpg', 11)
 def onsecond24(e):
+    formation_of_a_history(7)
     pet_description('cat/Шотландская_вислоухая_кошка.jpg', 12)
 def onsecond25(e):
+    formation_of_a_history(14)
     pet_description('cat/Kurilian_Bobtail.jpg', 13)
 def onsecond26(e):
+    formation_of_a_history(13)
     pet_description('cat/american_bobtail.jpg', 1)
 def onsecond27(e):
+    formation_of_a_history(10)
     pet_description('cat/Norvezhskaja.jpg', 15)
 def onsecond28(e):
+    formation_of_a_history(9)
     pet_description('cat/Мейн-кун.jpg', 16)
 def onsecond29(e):
+    formation_of_a_history(12)
     pet_description('cat/Тайская_кошка.jpg', 3)
 def onsecond30(e):
+    formation_of_a_history(11)
     pet_description('cat/Абиссинская.jpg', 4)
 def onsecond31(e):
+    formation_of_a_history(10)
     pet_description('cat/Британская_короткошёрстная.jpg', 5)
 def onsecond32(e):
+    formation_of_a_history(9)
     pet_description('cat/Шотландская_вислоухая_кошка.jpg', 6)
 
 #Создаем объект бота
